@@ -1,0 +1,896 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>品种持仓表 V2.5</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', sans-serif;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+            min-height: 100vh;
+            padding: 20px;
+            color: #fff;
+        }
+        .container {
+            max-width: 1500px;
+            margin: 0 auto;
+        }
+        h1 {
+            text-align: center;
+            margin-bottom: 10px;
+            font-size: 24px;
+            color: #00d4ff;
+        }
+        .controls {
+            text-align: center;
+            margin-bottom: 20px;
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            flex-wrap: wrap;
+        }
+        .date-selector {
+            background: rgba(255,255,255,0.1);
+            border: 1px solid rgba(255,255,255,0.2);
+            color: #fff;
+            padding: 8px 15px;
+            border-radius: 6px;
+            font-size: 14px;
+            cursor: pointer;
+        }
+        .date-selector option {
+            background: #1a1a2e;
+            color: #fff;
+        }
+        .sort-btn {
+            background: rgba(0,212,255,0.2);
+            border: 1px solid rgba(0,212,255,0.4);
+            color: #00d4ff;
+            padding: 8px 15px;
+            border-radius: 6px;
+            font-size: 14px;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        .sort-btn:hover {
+            background: rgba(0,212,255,0.3);
+        }
+        .sort-btn.active {
+            background: rgba(0,212,255,0.5);
+            color: #fff;
+        }
+        .date-label {
+            text-align: center;
+            color: #888;
+            margin-bottom: 20px;
+            font-size: 14px;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            background: rgba(255,255,255,0.05);
+            border-radius: 12px;
+            overflow: hidden;
+            font-size: 13px;
+        }
+        th {
+            background: rgba(0,212,255,0.2);
+            padding: 12px 8px;
+            text-align: center;
+            font-weight: 600;
+            color: #00d4ff;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+            cursor: pointer;
+            user-select: none;
+            position: relative;
+        }
+        th:hover {
+            background: rgba(0,212,255,0.3);
+        }
+        th.sortable::after {
+            content: ' ⇅';
+            font-size: 10px;
+            opacity: 0.5;
+        }
+        th.sorted-asc::after {
+            content: ' ↑';
+            opacity: 1;
+        }
+        th.sorted-desc::after {
+            content: ' ↓';
+            opacity: 1;
+        }
+        td {
+            padding: 10px 8px;
+            text-align: center;
+            border-bottom: 1px solid rgba(255,255,255,0.05);
+        }
+        tr:hover {
+            background: rgba(255,255,255,0.05);
+        }
+        .positive { color: #ff6b6b; }
+        .negative { color: #51cf66; }
+        .variety-code {
+            font-weight: 600;
+            color: #ffd43b;
+        }
+        .variety-name {
+            color: #aaa;
+            font-size: 12px;
+        }
+        .stats {
+            display: flex;
+            justify-content: center;
+            gap: 30px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }
+        .stat-item {
+            background: rgba(255,255,255,0.05);
+            padding: 10px 20px;
+            border-radius: 8px;
+            text-align: center;
+        }
+        .stat-value {
+            font-size: 20px;
+            font-weight: 600;
+            color: #00d4ff;
+        }
+        .stat-label {
+            font-size: 12px;
+            color: #888;
+            margin-top: 5px;
+        }
+        .highlight {
+            background: rgba(255,212,59,0.1);
+        }
+        .clickable {
+            cursor: pointer;
+            text-decoration: underline;
+            text-decoration-style: dotted;
+        }
+        .clickable:hover {
+            background: rgba(0,212,255,0.2);
+        }
+        .account-link {
+            color: #00d4ff;
+            text-decoration: none;
+            font-weight: 500;
+        }
+        .account-link:hover {
+            text-decoration: underline;
+            color: #4dd0e1;
+        }
+        /* 弹窗样式 */
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0,0,0,0.8);
+        }
+        .modal-content {
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+            margin: 5% auto;
+            padding: 20px;
+            border-radius: 12px;
+            width: 90%;
+            max-width: 1000px;
+            border: 1px solid rgba(0,212,255,0.3);
+        }
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+        .modal-title {
+            font-size: 18px;
+            color: #00d4ff;
+        }
+        .close-btn {
+            color: #888;
+            font-size: 28px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+        .close-btn:hover {
+            color: #fff;
+        }
+        #chartCanvas {
+            width: 100%;
+            height: 400px;
+        }
+        #marketValueChartCanvas, #positionChartCanvas {
+            width: 100%;
+            height: 400px;
+            display: block;
+        }
+        /* 大弹窗样式 */
+        .modal-large {
+            max-width: 900px;
+            max-height: 80vh;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+        .modal-large .modal-body {
+            overflow-y: auto;
+            flex: 1;
+        }
+        /* 超大弹窗样式 */
+        .modal-xlarge {
+            max-width: 1200px;
+            max-height: 90vh;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+        .modal-xlarge .modal-body {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+            padding: 20px;
+            overflow-y: auto;
+            flex: 1;
+        }
+        .chart-section {
+            flex: 0 0 auto;
+        }
+        .chart-section canvas {
+            width: 100%;
+            height: 300px;
+            display: block;
+        }
+        .accounts-section {
+            flex: 1 1 auto;
+            display: flex;
+            flex-direction: column;
+            min-height: 0;
+        }
+        .accounts-tabs {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 15px;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+            padding-bottom: 10px;
+        }
+        .tab {
+            padding: 8px 20px;
+            cursor: pointer;
+            border-radius: 4px;
+            background: rgba(255,255,255,0.05);
+            color: #888;
+            transition: all 0.3s;
+        }
+        .tab:hover {
+            background: rgba(255,255,255,0.1);
+        }
+        .tab.active {
+            background: rgba(0,212,255,0.2);
+            color: #00d4ff;
+        }
+        #penetrationAccountsContainer {
+            max-height: 350px;
+            overflow-y: auto;
+        }
+        .accounts-table-container {
+            max-height: 60vh;
+            overflow-y: auto;
+            margin-top: 10px;
+        }
+        .accounts-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 13px;
+        }
+        .accounts-table th {
+            background: rgba(0,212,255,0.2);
+            padding: 12px 10px;
+            text-align: center;
+            font-weight: 600;
+            color: #00d4ff;
+            border-bottom: 1px solid rgba(0,212,255,0.3);
+            position: sticky;
+            top: 0;
+        }
+        .accounts-table td {
+            padding: 10px;
+            text-align: center;
+            border-bottom: 1px solid rgba(255,255,255,0.05);
+        }
+        .accounts-table tr:hover {
+            background: rgba(255,255,255,0.05);
+        }
+        .accounts-table .rank {
+            font-weight: bold;
+            color: #ffd43b;
+        }
+        .accounts-table .positive {
+            color: #ff6b6b;
+        }
+        .accounts-table .negative {
+            color: #51cf66;
+        }
+        /* 品种详情页概览统计 */
+        .stats-overview {
+            display: grid;
+            grid-template-columns: repeat(5, 1fr);
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+        .stat-card {
+            background: rgba(255,255,255,0.05);
+            border-radius: 8px;
+            padding: 15px;
+            text-align: center;
+            border: 1px solid rgba(255,255,255,0.1);
+        }
+        .stat-card .stat-label {
+            font-size: 12px;
+            color: #888;
+            margin-bottom: 8px;
+        }
+        .stat-card .stat-value {
+            font-size: 18px;
+            font-weight: bold;
+            color: #fff;
+        }
+        .history-section {
+            margin-top: 20px;
+        }
+        /* 数据信息栏 */
+        .data-info-bar {
+            display: flex;
+            gap: 20px;
+            margin-bottom: 15px;
+            padding: 12px 15px;
+            background: rgba(0,212,255,0.1);
+            border-radius: 8px;
+            border: 1px solid rgba(0,212,255,0.2);
+            flex-wrap: wrap;
+            align-items: center;
+        }
+        .data-info-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 13px;
+        }
+        .data-info-item .label {
+            color: #888;
+        }
+        .data-info-item .value {
+            color: #00d4ff;
+            font-weight: 600;
+        }
+        .missing-data-warning {
+            display: none;
+            padding: 10px 15px;
+            background: rgba(255,193,7,0.15);
+            border: 1px solid rgba(255,193,7,0.3);
+            border-radius: 6px;
+            color: #ffc107;
+            font-size: 13px;
+            margin-bottom: 15px;
+        }
+        /* 交易日历 */
+        .calendar-section {
+            margin-bottom: 20px;
+        }
+        .calendar-section h3 {
+            font-size: 14px;
+            color: #00d4ff;
+            margin-bottom: 10px;
+        }
+        .calendar-grid {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            gap: 4px;
+            max-width: 280px;
+        }
+        .calendar-weekday {
+            text-align: center;
+            font-size: 12px;
+            color: #888;
+            padding: 5px;
+        }
+        .calendar-day {
+            aspect-ratio: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 12px;
+            border-radius: 4px;
+            background: rgba(255,255,255,0.05);
+            color: #666;
+        }
+        .calendar-day.empty {
+            background: transparent;
+        }
+        .calendar-day.has-data {
+            background: rgba(0,212,255,0.3);
+            color: #fff;
+            font-weight: 600;
+            cursor: pointer;
+        }
+        .calendar-day.has-data:hover {
+            background: rgba(0,212,255,0.5);
+        }
+        .calendar-day.today {
+            background: rgba(255,107,107,0.5);
+            color: #fff;
+            font-weight: bold;
+            box-shadow: 0 0 8px rgba(255,107,107,0.5);
+        }
+        /* 图表行布局 */
+        .chart-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+        .chart-box {
+            background: rgba(255,255,255,0.03);
+            border-radius: 8px;
+            padding: 15px;
+            border: 1px solid rgba(255,255,255,0.1);
+        }
+        .chart-title {
+            color: #00d4ff;
+            font-size: 14px;
+            margin-bottom: 15px;
+            text-align: center;
+        }
+        .chart-box canvas {
+            width: 100%;
+            height: 250px;
+            display: block;
+        }
+        /* 热力图样式 */
+        #heatmapContainer {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 4px;
+            padding: 15px;
+            justify-content: center;
+        }
+        .heatmap-item {
+            width: 80px;
+            height: 60px;
+            border-radius: 4px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            font-size: 11px;
+            cursor: pointer;
+            transition: transform 0.2s;
+            border: 1px solid rgba(255,255,255,0.1);
+        }
+        .heatmap-item:hover {
+            transform: scale(1.05);
+            border-color: rgba(255,255,255,0.3);
+        }
+        .heatmap-item .variety-code {
+            font-weight: bold;
+            margin-bottom: 4px;
+        }
+        .heatmap-item .variety-value {
+            font-size: 10px;
+            opacity: 0.9;
+        }
+        /* 分析按钮 */
+        .analysis-btn {
+            background: linear-gradient(135deg, rgba(0,212,255,0.2), rgba(0,212,255,0.1));
+            border: 1px solid rgba(0,212,255,0.3);
+            color: #00d4ff;
+            padding: 8px 16px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 13px;
+            transition: all 0.3s;
+        }
+        .analysis-btn:hover {
+            background: linear-gradient(135deg, rgba(0,212,255,0.3), rgba(0,212,255,0.2));
+            box-shadow: 0 0 10px rgba(0,212,255,0.3);
+        }
+        .export-btn {
+            background: linear-gradient(135deg, rgba(76,175,80,0.2), rgba(76,175,80,0.1));
+            border: 1px solid rgba(76,175,80,0.3);
+            color: #4caf50;
+            padding: 8px 16px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 13px;
+            transition: all 0.3s;
+        }
+        .export-btn:hover {
+            background: linear-gradient(135deg, rgba(76,175,80,0.3), rgba(76,175,80,0.2));
+            box-shadow: 0 0 10px rgba(76,175,80,0.3);
+        }
+        .export-btn.csv {
+            background: linear-gradient(135deg, rgba(255,152,0,0.2), rgba(255,152,0,0.1));
+            border: 1px solid rgba(255,152,0,0.3);
+            color: #ff9800;
+        }
+        .export-btn.csv:hover {
+            background: linear-gradient(135deg, rgba(255,152,0,0.3), rgba(255,152,0,0.2));
+            box-shadow: 0 0 10px rgba(255,152,0,0.3);
+        }
+    </style>
+
+</head>
+<body>
+    <div class="container">
+        <h1>品种持仓表 <span style="font-size:14px;color:#888;font-weight:normal;">V2.7 (2026-05-26)</span></h1>
+        <div style="text-align: center; margin-bottom: 10px;"><span class="version-badge" style="background: rgba(0,212,255,0.2); color: #00d4ff; padding: 3px 10px; border-radius: 4px; font-size: 12px;">V2.5</span></div>
+        <div class="controls">
+            <select class="date-selector" id="dateSelector" onchange="changeDate()">
+                <!-- 选项由JS动态生成 -->
+            </select>
+            <button class="sort-btn" id="sortByMarketValue" onclick="sortTable('net_market_value')">
+                按净头寸市值排序
+            </button>
+            <button class="analysis-btn" onclick="showMarketAnalysis()">
+                📊 市场分析
+            </button>
+            <button class="analysis-btn" onclick="showStrategyReport()" style="background: rgba(255,170,0,0.2); border-color: rgba(255,170,0,0.4); color: #ffaa00;">
+                📈 聚势策略报告
+            </button>
+            <button class="analysis-btn" onclick="showMarketValueCurve()" style="background: rgba(138,43,226,0.2); border-color: rgba(138,43,226,0.4); color: #da70d6;">
+                📉 净持仓市值曲线
+            </button>
+            <button class="export-btn" onclick="exportToExcel()">
+                📥 Excel导出
+            </button>
+            <button class="export-btn csv" onclick="exportToCSV()">
+                📄 CSV导出
+            </button>
+        </div>
+        <div class="date-label" id="dateLabel">数据日期: 2026-06-12</div>
+        
+        <div class="stats">
+            <div class="stat-item">
+                <div class="stat-value" id="totalVarieties">-</div>
+                <div class="stat-label">品种数量</div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-value" id="bullishVarieties">-</div>
+                <div class="stat-label">多头品种</div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-value" id="bearishVarieties">-</div>
+                <div class="stat-label">空头品种</div>
+            </div>
+        </div>
+        
+        <table>
+            <thead>
+                <tr>
+                    <th>品种代码</th>
+                    <th>品种名称</th>
+                    <th>多单(手)</th>
+                    <th>空单(手)</th>
+                    <th class="sortable" onclick="sortTable('net_position')">净头寸(手)</th>
+                    <th class="sortable" onclick="sortTable('net_market_value')">净头寸市值(万)</th>
+                    <th>多单(人)</th>
+                    <th>空单(人)</th>
+                    <th class="sortable" onclick="sortTable('long_profit')">多单利润(万)</th>
+                    <th class="sortable" onclick="sortTable('short_profit')">空单利润(万)</th>
+                    <th class="sortable" onclick="sortTable('long_ratio')">多单占比</th>
+                    <th class="sortable" onclick="sortTable('short_ratio')">空单占比</th>
+                </tr>
+            </thead>
+            <tbody id="tableBody">
+                <!-- 数据由JS动态生成 -->
+            </tbody>
+        </table>
+    </div>
+    
+    <!-- 净头寸市值曲线图弹窗 -->
+    <div id="marketValueChartModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <div class="modal-title" id="marketValueModalTitle">品种净头寸市值曲线</div>
+                <span class="close-btn" onclick="closeMarketValueModal()">&times;</span>
+            </div>
+            <canvas id="marketValueChartCanvas"></canvas>
+        </div>
+    </div>
+    
+    <!-- 净头寸手数曲线图+账户穿透弹窗 -->
+    <div id="positionChartModal" class="modal">
+        <div class="modal-content modal-xlarge">
+            <div class="modal-header">
+                <div class="modal-title" id="positionModalTitle">品种净头寸穿透分析</div>
+                <span class="close-btn" onclick="closePositionModal()">&times;</span>
+            </div>
+            <div class="modal-body">
+                <!-- 曲线图区域 -->
+                <div class="chart-section">
+                    <canvas id="positionChartCanvas"></canvas>
+                </div>
+                <!-- 账户列表区域 -->
+                <div class="accounts-section">
+                    <div class="accounts-tabs">
+                        <div class="tab active" onclick="switchTab('long')">
+                            多单账户 (<span id="longAccountsCount">0</span>)
+                        </div>
+                        <div class="tab" onclick="switchTab('short')">
+                            空单账户 (<span id="shortAccountsCount">0</span>)
+                        </div>
+                    </div>
+                    <div class="accounts-table-container" id="penetrationAccountsContainer">
+                        <table class="accounts-table">
+                            <thead>
+                                <tr>
+                                    <th>排名</th>
+                                    <th>账户ID</th>
+                                    <th>持仓手数</th>
+                                    <th>持仓市值(万)</th>
+                                    <th>盈亏(万)</th>
+                                    <th>持仓均价</th>
+                                </tr>
+                            </thead>
+                            <tbody id="penetrationAccountsTableBody">
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- 多单账户详情弹窗 -->
+    <div id="longAccountsModal" class="modal">
+        <div class="modal-content modal-large">
+            <div class="modal-header">
+                <div class="modal-title" id="longAccountsModalTitle">多单账户详情</div>
+                <span class="close-btn" onclick="closeLongAccountsModal()">&times;</span>
+            </div>
+            <div class="accounts-table-container">
+                <table class="accounts-table" id="longAccountsTable">
+                    <thead>
+                        <tr>
+                            <th>排名</th>
+                            <th>账户ID</th>
+                            <th>持仓手数</th>
+                            <th>持仓市值(万)</th>
+                            <th>盈亏(万)</th>
+                            <th>均价</th>
+                        </tr>
+                    </thead>
+                    <tbody id="longAccountsTableBody">
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    
+    <!-- 空单账户详情弹窗 -->
+    <div id="shortAccountsModal" class="modal">
+        <div class="modal-content modal-large">
+            <div class="modal-header">
+                <div class="modal-title" id="shortAccountsModalTitle">空单账户详情</div>
+                <span class="close-btn" onclick="closeShortAccountsModal()">&times;</span>
+            </div>
+            <div class="accounts-table-container">
+                <table class="accounts-table" id="shortAccountsTable">
+                    <thead>
+                        <tr>
+                            <th>排名</th>
+                            <th>账户ID</th>
+                            <th>持仓手数</th>
+                            <th>持仓市值(万)</th>
+                            <th>盈亏(万)</th>
+                            <th>均价</th>
+                        </tr>
+                    </thead>
+                    <tbody id="shortAccountsTableBody">
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    
+    <!-- 账户详情弹窗 - 本地数据渲染 -->
+    <div id="accountDetailModal" class="modal">
+        <div class="modal-content modal-xlarge" style="width:95%;max-width:1400px;height:90vh;">
+            <div class="modal-header">
+                <div class="modal-title" id="accountDetailTitle">账户详情</div>
+                <span class="close-btn" onclick="closeAccountDetailModal()">&times;</span>
+            </div>
+            <div class="modal-body" style="padding:15px;height:calc(90vh - 60px);overflow-y:auto;">
+                <div id="accountDetailContent">
+                    <div id="accountStatsCards" style="display:flex;gap:15px;margin-bottom:15px;flex-wrap:wrap;"></div>
+                    <div id="accountContractsTable"></div>
+                    <div style="margin-top:10px;text-align:center;">
+                        <a id="accountDetailFullLink" href="javascript:void(0)" target="_blank" style="color:#00d4ff;font-size:13px;">查看完整详情（含净值曲线）→</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- 品种详情分析弹窗 -->
+    <div id="varietyDetailModal" class="modal">
+        <div class="modal-content modal-xlarge">
+            <div class="modal-header">
+                <div class="modal-title" id="varietyDetailTitle">品种详情分析</div>
+                <span class="close-btn" onclick="closeVarietyDetailModal()">&times;</span>
+            </div>
+            <div class="modal-body">
+                <!-- 概览统计卡片 -->
+                <div class="stats-overview">
+                    <div class="stat-card">
+                        <div class="stat-label">多单总量</div>
+                        <div class="stat-value positive" id="detailLongVolume">-</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-label">空单总量</div>
+                        <div class="stat-value negative" id="detailShortVolume">-</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-label">净头寸</div>
+                        <div class="stat-value" id="detailNetPosition">-</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-label">净头寸市值</div>
+                        <div class="stat-value" id="detailNetMarketValue">-</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-label">多单人数</div>
+                        <div class="stat-value positive" id="detailLongAccounts">-</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-label">空单人数</div>
+                        <div class="stat-value negative" id="detailShortAccounts">-</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-label">多单利润</div>
+                        <div class="stat-value" id="detailLongProfit">-</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-label">空单利润</div>
+                        <div class="stat-value" id="detailShortProfit">-</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-label">多单占比</div>
+                        <div class="stat-value positive" id="detailLongRatio">-</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-label">空单占比</div>
+                        <div class="stat-value negative" id="detailShortRatio">-</div>
+                    </div>
+                </div>
+                
+                <!-- 多空对比图和利润分布图 -->
+                <div class="chart-row">
+                    <div class="chart-box">
+                        <h4 class="chart-title">多空对比</h4>
+                        <canvas id="longShortCompareChart"></canvas>
+                    </div>
+                    <div class="chart-box">
+                        <h4 class="chart-title">利润分布</h4>
+                        <canvas id="profitDistributionChart"></canvas>
+                    </div>
+                </div>
+                
+                <!-- 双曲线图 -->
+                <div class="chart-section">
+                    <h4 class="chart-title">历史走势</h4>
+                    <canvas id="varietyDetailChart"></canvas>
+                </div>
+                
+                <!-- 历史数据表格 -->
+                <div class="history-section">
+                    <h3 style="color: #00d4ff; margin-bottom: 15px; font-size: 16px;">历史数据</h3>
+                    <div class="accounts-table-container">
+                        <table class="accounts-table" id="varietyHistoryTable">
+                            <thead>
+                                <tr>
+                                    <th>日期</th>
+                                    <th>多单量</th>
+                                    <th>空单量</th>
+                                    <th>净头寸</th>
+                                    <th>净头寸市值</th>
+                                </tr>
+                            </thead>
+                            <tbody id="varietyHistoryTableBody">
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- 市场分析图表弹窗 -->
+    <div id="marketAnalysisModal" class="modal">
+        <div class="modal-content modal-xlarge">
+            <div class="modal-header">
+                <div class="modal-title">市场分析图表</div>
+                <span class="close-btn" onclick="closeMarketAnalysisModal()">&times;</span>
+            </div>
+            <div class="modal-body">
+                <!-- 热力图 -->
+                <div class="chart-section">
+                    <h4 class="chart-title">品种持仓热力图（按净头寸市值）</h4>
+                    <div id="heatmapContainer"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    
+
+    <!-- 聚势策略报告弹窗 -->
+    <div id="strategyReportModal" class="modal">
+        <div class="modal-content modal-xlarge" style="width: 95%; max-width: 1400px; height: 90vh;">
+            <div class="modal-header">
+                <div class="modal-title">🎯 聚势策略报告</div>
+                <span class="close-btn" onclick="closeStrategyReportModal()">&times;</span>
+            </div>
+            <div class="modal-body" style="padding: 0; height: calc(90vh - 60px);">
+                <iframe id="reportFrame" src="" style="width: 100%; height: 100%; border: none;"></iframe>
+            </div>
+        </div>
+    </div>
+    
+    <!-- 净持仓市值曲线弹窗 -->
+    <div id="marketValueCurveModal" class="modal">
+        <div class="modal-content modal-xlarge" style="width: 95%; max-width: 1400px; height: 90vh;">
+            <div class="modal-header">
+                <div class="modal-title">📉 净持仓市值曲线</div>
+                <span class="close-btn" onclick="closeMarketValueCurveModal()">&times;</span>
+            </div>
+            <div class="modal-body" style="padding: 0; height: calc(90vh - 60px);">
+                <iframe id="curveFrame" src="" style="width: 100%; height: 100%; border: none;"></iframe>
+            </div>
+        </div>
+    </div>
+    
+    <!-- 报告和曲线JS -->
+    <script>
+        // 显示策略报告弹窗
+        function showStrategyReport() {
+            const modal = document.getElementById('strategyReportModal');
+            const frame = document.getElementById('reportFrame');
+            frame.src = '聚势策略报告_20260612.html';
+            modal.style.display = 'block';
+        }
+        
+        // 关闭策略报告弹窗
+        function closeStrategyReportModal() {
+            const modal = document.getElementById('strategyReportModal');
+            const frame = document.getElementById('reportFrame');
+            frame.src = '';
+            modal.style.display = 'none';
+        }
+        
+        // 显示市值曲线弹窗
+        function showMarketValueCurve() {
+            const modal = document.getElementById('marketValueCurveModal');
+            const frame = document.getElementById('curveFrame');
+            frame.src = 'variety_market_value_2026-06-12.html';
+            modal.style.display = 'block';
+        }
+        
+        // 关闭市值曲线弹窗
+        function closeMarketValueCurveModal() {
+            const modal = document.getElementById('marketValueCurveModal');
+            const frame = document.getElementById('curveFrame');
+            frame.src = '';
+            modal.style.display = 'none';
+        }
+    </script>
+
+
+<script src="app.js?v=20260612"></script>
+</body>
+</html>
