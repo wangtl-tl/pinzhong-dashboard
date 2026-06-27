@@ -1,0 +1,274 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>聚势策略报告</title>
+    <script src="https://cdn.jsdelivr.net/npm/echarts@5.4.3/dist/echarts.min.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #f5f7fa; color: #333; }
+        .container { max-width: 1400px; margin: 0 auto; padding: 20px; }
+        .header { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 30px; border-radius: 12px; margin-bottom: 20px; }
+        .header h1 { font-size: 28px; margin-bottom: 10px; }
+        .header .meta { opacity: 0.9; font-size: 14px; }
+        .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 15px; margin-bottom: 20px; }
+        .stat-card { background: white; padding: 20px; border-radius: 10px; box-shadow: 0 2px 8px rgba(0,0,0,0.08); text-align: center; }
+        .stat-card .label { font-size: 12px; color: #666; margin-bottom: 8px; }
+        .stat-card .value { font-size: 32px; font-weight: bold; }
+        .stat-card .value.red { color: #f5222d; }
+        .stat-card .value.green { color: #52c41a; }
+        .stat-card .value.neutral { color: #faad14; }
+        .chart-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(600px, 1fr)); gap: 20px; margin-bottom: 20px; }
+        .chart-card { background: white; padding: 20px; border-radius: 10px; box-shadow: 0 2px 8px rgba(0,0,0,0.08); }
+        .chart-card h3 { font-size: 16px; margin-bottom: 15px; color: #333; border-left: 4px solid #667eea; padding-left: 10px; }
+        .chart { width: 100%; height: 350px; }
+        .signal-table { background: white; border-radius: 10px; box-shadow: 0 2px 8px rgba(0,0,0,0.08); overflow: hidden; }
+        .signal-table h3 { padding: 20px; border-bottom: 1px solid #eee; font-size: 16px; border-left: 4px solid #667eea; }
+        table { width: 100%; border-collapse: collapse; font-size: 13px; }
+        th, td { padding: 12px 15px; text-align: left; border-bottom: 1px solid #f0f0f0; }
+        th { background: #fafafa; font-weight: 600; font-size: 12px; color: #666; }
+        tr:hover { background: #f5f7fa; }
+        .badge { padding: 4px 10px; border-radius: 4px; font-size: 11px; font-weight: 500; display: inline-block; }
+        .badge.strong-long { background: #fff1f0; color: #cf1322; border: 1px solid #ff7875; }
+        .badge.moderate-long { background: #ffccc7; color: #f5222d; border: 1px solid #ffa39e; }
+        .badge.neutral { background: #fff7e6; color: #fa8c16; border: 1px solid #ffd591; }
+        .badge.moderate-short { background: #f6ffed; color: #52c41a; border: 1px solid #b7eb8f; }
+        .badge.strong-short { background: #d9f7be; color: #389e0d; border: 1px solid #b7eb8f; }
+        .score-bar { width: 80px; height: 6px; background: #f0f0f0; border-radius: 3px; overflow: hidden; display: inline-block; vertical-align: middle; margin-left: 8px; }
+        .score-bar .fill { height: 100%; border-radius: 3px; }
+        .score-bar .fill.red { background: #f5222d; }
+        .score-bar .fill.green { background: #52c41a; }
+        .number { font-family: 'SF Mono', Monaco, monospace; }
+        .red { color: #f5222d; }
+        .green { color: #52c41a; }
+        .link-btn { background: #667eea; color: white; padding: 6px 12px; border-radius: 4px; text-decoration: none; font-size: 12px; display: inline-block; }
+        .link-btn:hover { background: #5a67d8; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🎯 聚势策略报告</h1>
+            <div class="meta">基于大户持仓净头寸变化生成 | 数据日期: 2026-06-26 | 生成时间: 2026-06-27 12:29</div>
+        </div>
+
+        <div class="stats-grid">
+            <div class="stat-card">
+                <div class="label">强烈看多</div>
+                <div class="value red" id="strongLong">11</div>
+            </div>
+            <div class="stat-card">
+                <div class="label">适度看多</div>
+                <div class="value" style="color:#ff7875" id="moderateLong">3</div>
+            </div>
+            <div class="stat-card">
+                <div class="label">中性</div>
+                <div class="value neutral" id="neutral">0</div>
+            </div>
+            <div class="stat-card">
+                <div class="label">适度看空</div>
+                <div class="value" style="color:#95de64" id="moderateShort">10</div>
+            </div>
+            <div class="stat-card">
+                <div class="label">强烈看空</div>
+                <div class="value green" id="strongShort">20</div>
+            </div>
+            <div class="stat-card">
+                <div class="label">总品种数</div>
+                <div class="value" style="color:#333" id="totalCount">78</div>
+            </div>
+        </div>
+
+        <div style="text-align: center; margin-bottom: 20px;">
+            <a href="品种持仓表.html" class="link-btn">← 返回品种持仓表</a>
+        </div>
+
+        <div class="chart-grid">
+            <div class="chart-card">
+                <h3>📊 信号得分排名 (Top 15)</h3>
+                <div id="rankChart" class="chart"></div>
+            </div>
+            <div class="chart-card">
+                <h3>🎯 多空力量分布</h3>
+                <div id="scatterChart" class="chart"></div>
+            </div>
+        </div>
+
+        <div class="chart-grid">
+            <div class="chart-card">
+                <h3>📈 信号类型分布</h3>
+                <div id="pieChart" class="chart"></div>
+            </div>
+            <div class="chart-card">
+                <h3>💰 净持仓市值分布 (Top 15)</h3>
+                <div id="barChart" class="chart"></div>
+            </div>
+        </div>
+
+        <div class="signal-table">
+            <h3>📋 完整信号列表</h3>
+            <table id="signalTable">
+                <thead>
+                    <tr>
+                        <th>排名</th>
+                        <th>品种</th>
+                        <th>信号类型</th>
+                        <th>得分</th>
+                        <th>净持仓</th>
+                        <th>净持仓市值(万)</th>
+                        <th>多空账户比</th>
+                        <th>1日变化</th>
+                        <th>3日变化</th>
+                        <th>5日变化</th>
+                        <th>置信度</th>
+                    </tr>
+                </thead>
+                <tbody id="tableBody">
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <script>
+        const signalsData = [{"variety": "IM", "variety_name": "IM", "signal_type": "中性观望", "signal_score": -28.56, "current_net_position": 505, "current_net_market_value": 81227.53, "long_accounts": 93, "short_accounts": 61, "long_volume": 953, "short_volume": 448, "net_position_change_1d": 0.0, "net_position_change_3d": -42.29, "net_position_change_5d": -37.03, "long_short_ratio": 1.52, "long_short_volume_ratio": 2.13, "momentum_score": -23.8, "extreme_warning": false, "date": "2026-06-26", "confidence": "低"}, {"variety": "IF", "variety_name": "IF", "signal_type": "中性观望", "signal_score": -11.12, "current_net_position": 537, "current_net_market_value": 75454.01, "long_accounts": 70, "short_accounts": 49, "long_volume": 826, "short_volume": 289, "net_position_change_1d": 0.0, "net_position_change_3d": -4.11, "net_position_change_5d": -32.96, "long_short_ratio": 1.43, "long_short_volume_ratio": 2.86, "momentum_score": -11.12, "extreme_warning": false, "date": "2026-06-26", "confidence": "低"}, {"variety": "AL", "variety_name": "铝", "signal_type": "中性观望", "signal_score": -14.36, "current_net_position": -5195, "current_net_market_value": -61816.8, "long_accounts": 12, "short_accounts": 88, "long_volume": 125, "short_volume": 5320, "net_position_change_1d": 0.0, "net_position_change_3d": -11.39, "net_position_change_5d": -28.49, "long_short_ratio": 0.14, "long_short_volume_ratio": 0.02, "momentum_score": -11.96, "extreme_warning": false, "date": "2026-06-26", "confidence": "低"}, {"variety": "LH", "variety_name": "生猪", "signal_type": "强烈看多", "signal_score": 100, "current_net_position": 2274, "current_net_market_value": 49282.38, "long_accounts": 84, "short_accounts": 57, "long_volume": 3498, "short_volume": 1224, "net_position_change_1d": 0.0, "net_position_change_3d": 129.47, "net_position_change_5d": 608.41, "long_short_ratio": 1.47, "long_short_volume_ratio": 2.86, "momentum_score": 100, "extreme_warning": false, "date": "2026-06-26", "confidence": "高"}, {"variety": "TL", "variety_name": "TL", "signal_type": "强烈看多", "signal_score": 100, "current_net_position": 396, "current_net_market_value": 45039.99, "long_accounts": 54, "short_accounts": 7, "long_volume": 416, "short_volume": 20, "net_position_change_1d": 0.0, "net_position_change_3d": 473.58, "net_position_change_5d": -15.02, "long_short_ratio": 7.71, "long_short_volume_ratio": 20.8, "momentum_score": 100, "extreme_warning": false, "date": "2026-06-26", "confidence": "高"}, {"variety": "IC", "variety_name": "IC", "signal_type": "中性观望", "signal_score": -36.37, "current_net_position": 261, "current_net_market_value": 43390.49, "long_accounts": 75, "short_accounts": 45, "long_volume": 471, "short_volume": 210, "net_position_change_1d": 0.0, "net_position_change_3d": -50.75, "net_position_change_5d": -50.29, "long_short_ratio": 1.67, "long_short_volume_ratio": 2.24, "momentum_score": -30.31, "extreme_warning": false, "date": "2026-06-26", "confidence": "低"}, {"variety": "RB", "variety_name": "螺纹钢", "signal_type": "适度看空", "signal_score": -62.87, "current_net_position": -12491, "current_net_market_value": -39669.5, "long_accounts": 18, "short_accounts": 84, "long_volume": 3932, "short_volume": 16423, "net_position_change_1d": 0.0, "net_position_change_3d": -165.99, "net_position_change_5d": -8.66, "long_short_ratio": 0.21, "long_short_volume_ratio": 0.24, "momentum_score": -52.4, "extreme_warning": false, "date": "2026-06-26", "confidence": "中"}, {"variety": "TA", "variety_name": "PTA", "signal_type": "强烈看空", "signal_score": -100, "current_net_position": -12608, "current_net_market_value": -35967.5, "long_accounts": 26, "short_accounts": 72, "long_volume": 1769, "short_volume": 14377, "net_position_change_1d": 0.0, "net_position_change_3d": -68.42, "net_position_change_5d": -243.64, "long_short_ratio": 0.36, "long_short_volume_ratio": 0.12, "momentum_score": -93.62, "extreme_warning": false, "date": "2026-06-26", "confidence": "高"}, {"variety": "JD", "variety_name": "鸡蛋", "signal_type": "适度看多", "signal_score": 47.1, "current_net_position": 8429, "current_net_market_value": 34516.53, "long_accounts": 55, "short_accounts": 56, "long_volume": 12593, "short_volume": 4164, "net_position_change_1d": 0.0, "net_position_change_3d": 13.66, "net_position_change_5d": 143.33, "long_short_ratio": 0.98, "long_short_volume_ratio": 3.02, "momentum_score": 47.1, "extreme_warning": false, "date": "2026-06-26", "confidence": "中"}, {"variety": "T", "variety_name": "T", "signal_type": "强烈看多", "signal_score": 100, "current_net_position": 250, "current_net_market_value": 27265.24, "long_accounts": 34, "short_accounts": 14, "long_volume": 302, "short_volume": 52, "net_position_change_1d": 0.0, "net_position_change_3d": 431.91, "net_position_change_5d": 27.55, "long_short_ratio": 2.43, "long_short_volume_ratio": 5.81, "momentum_score": 100, "extreme_warning": false, "date": "2026-06-26", "confidence": "高"}, {"variety": "SN", "variety_name": "锡", "signal_type": "强烈看空", "signal_score": -100, "current_net_position": -641, "current_net_market_value": -25293.43, "long_accounts": 15, "short_accounts": 53, "long_volume": 68, "short_volume": 709, "net_position_change_1d": 0.0, "net_position_change_3d": -12.06, "net_position_change_5d": -921.79, "long_short_ratio": 0.28, "long_short_volume_ratio": 0.1, "momentum_score": -100, "extreme_warning": false, "date": "2026-06-26", "confidence": "高"}, {"variety": "TS", "variety_name": "两年期国债", "signal_type": "中性观望", "signal_score": 16.74, "current_net_position": 122, "current_net_market_value": 25036.82, "long_accounts": 8, "short_accounts": 1, "long_volume": 125, "short_volume": 3, "net_position_change_1d": 0.0, "net_position_change_3d": 22.0, "net_position_change_5d": 24.49, "long_short_ratio": 8.0, "long_short_volume_ratio": 41.67, "momentum_score": 13.95, "extreme_warning": false, "date": "2026-06-26", "confidence": "低"}, {"variety": "M", "variety_name": "豆粕", "signal_type": "适度看多", "signal_score": 57.52, "current_net_position": 8287, "current_net_market_value": 24679.38, "long_accounts": 58, "short_accounts": 31, "long_volume": 9879, "short_volume": 1592, "net_position_change_1d": 0.0, "net_position_change_3d": 55.3, "net_position_change_5d": 104.47, "long_short_ratio": 1.87, "long_short_volume_ratio": 6.21, "momentum_score": 47.93, "extreme_warning": false, "date": "2026-06-26", "confidence": "中"}, {"variety": "SA", "variety_name": "纯碱", "signal_type": "中性观望", "signal_score": -8.7, "current_net_position": -10615, "current_net_market_value": -24315.5, "long_accounts": 25, "short_accounts": 97, "long_volume": 4018, "short_volume": 14633, "net_position_change_1d": 0.0, "net_position_change_3d": -12.82, "net_position_change_5d": -11.36, "long_short_ratio": 0.26, "long_short_volume_ratio": 0.27, "momentum_score": -7.25, "extreme_warning": false, "date": "2026-06-26", "confidence": "低"}, {"variety": "AG", "variety_name": "白银", "signal_type": "中性观望", "signal_score": -12.37, "current_net_position": -961, "current_net_market_value": -23965.19, "long_accounts": 31, "short_accounts": 79, "long_volume": 433, "short_volume": 1394, "net_position_change_1d": 0.0, "net_position_change_3d": 20.64, "net_position_change_5d": -55.0, "long_short_ratio": 0.39, "long_short_volume_ratio": 0.31, "momentum_score": -10.31, "extreme_warning": false, "date": "2026-06-26", "confidence": "低"}, {"variety": "I", "variety_name": "铁矿石", "signal_type": "强烈看多", "signal_score": 100, "current_net_position": 2775, "current_net_market_value": 22060.01, "long_accounts": 34, "short_accounts": 75, "long_volume": 6749, "short_volume": 3974, "net_position_change_1d": 0.0, "net_position_change_3d": 101.23, "net_position_change_5d": 430.75, "long_short_ratio": 0.45, "long_short_volume_ratio": 1.7, "momentum_score": 100, "extreme_warning": false, "date": "2026-06-26", "confidence": "高"}, {"variety": "CF", "variety_name": "棉花", "signal_type": "强烈看空", "signal_score": -100, "current_net_position": -2715, "current_net_market_value": -21297.15, "long_accounts": 26, "short_accounts": 72, "long_volume": 714, "short_volume": 3429, "net_position_change_1d": 0.0, "net_position_change_3d": -4013.64, "net_position_change_5d": -448.52, "long_short_ratio": 0.36, "long_short_volume_ratio": 0.21, "momentum_score": -100, "extreme_warning": false, "date": "2026-06-26", "confidence": "高"}, {"variety": "RU", "variety_name": "橡胶", "signal_type": "强烈看空", "signal_score": -100, "current_net_position": -1243, "current_net_market_value": -20877.52, "long_accounts": 19, "short_accounts": 69, "long_volume": 327, "short_volume": 1570, "net_position_change_1d": 0.0, "net_position_change_3d": -734.18, "net_position_change_5d": -376.84, "long_short_ratio": 0.28, "long_short_volume_ratio": 0.21, "momentum_score": -100, "extreme_warning": false, "date": "2026-06-26", "confidence": "高"}, {"variety": "CU", "variety_name": "铜", "signal_type": "强烈看空", "signal_score": -100, "current_net_position": -377, "current_net_market_value": -19386.75, "long_accounts": 21, "short_accounts": 80, "long_volume": 418, "short_volume": 795, "net_position_change_1d": 0.0, "net_position_change_3d": -209.02, "net_position_change_5d": -284.8, "long_short_ratio": 0.26, "long_short_volume_ratio": 0.53, "momentum_score": -100, "extreme_warning": false, "date": "2026-06-26", "confidence": "高"}, {"variety": "SR", "variety_name": "白糖", "signal_type": "强烈看空", "signal_score": -100, "current_net_position": -3406, "current_net_market_value": -18108.08, "long_accounts": 20, "short_accounts": 65, "long_volume": 902, "short_volume": 4308, "net_position_change_1d": 0.0, "net_position_change_3d": -20.65, "net_position_change_5d": -465.78, "long_short_ratio": 0.31, "long_short_volume_ratio": 0.21, "momentum_score": -100, "extreme_warning": false, "date": "2026-06-26", "confidence": "高"}, {"variety": "HC", "variety_name": "热卷", "signal_type": "强烈看多", "signal_score": 100, "current_net_position": 5256, "current_net_market_value": 17340.9, "long_accounts": 15, "short_accounts": 62, "long_volume": 10346, "short_volume": 5090, "net_position_change_1d": 0.0, "net_position_change_3d": 441.86, "net_position_change_5d": 621.98, "long_short_ratio": 0.24, "long_short_volume_ratio": 2.03, "momentum_score": 100, "extreme_warning": false, "date": "2026-06-26", "confidence": "高"}, {"variety": "AU", "variety_name": "黄金", "signal_type": "适度看空", "signal_score": -51.63, "current_net_position": -185, "current_net_market_value": -16869.61, "long_accounts": 32, "short_accounts": 50, "long_volume": 165, "short_volume": 350, "net_position_change_1d": 0.0, "net_position_change_3d": 0.0, "net_position_change_5d": -143.42, "long_short_ratio": 0.64, "long_short_volume_ratio": 0.47, "momentum_score": -43.03, "extreme_warning": false, "date": "2026-06-26", "confidence": "中"}, {"variety": "V", "variety_name": "PVC", "signal_type": "中性观望", "signal_score": -5.58, "current_net_position": -7163, "current_net_market_value": -16770.63, "long_accounts": 20, "short_accounts": 83, "long_volume": 7369, "short_volume": 14532, "net_position_change_1d": 0.0, "net_position_change_3d": -17.18, "net_position_change_5d": 1.67, "long_short_ratio": 0.24, "long_short_volume_ratio": 0.51, "momentum_score": -4.65, "extreme_warning": false, "date": "2026-06-26", "confidence": "低"}, {"variety": "TF", "variety_name": "TF", "signal_type": "强烈看多", "signal_score": 100, "current_net_position": 147, "current_net_market_value": 15633.67, "long_accounts": 20, "short_accounts": 3, "long_volume": 156, "short_volume": 9, "net_position_change_1d": 0.0, "net_position_change_3d": 512.5, "net_position_change_5d": 406.9, "long_short_ratio": 6.67, "long_short_volume_ratio": 17.33, "momentum_score": 100, "extreme_warning": false, "date": "2026-06-26", "confidence": "高"}, {"variety": "LC", "variety_name": "LC", "signal_type": "强烈看空", "signal_score": -100, "current_net_position": -995, "current_net_market_value": -15385.32, "long_accounts": 23, "short_accounts": 63, "long_volume": 1547, "short_volume": 2542, "net_position_change_1d": 0.0, "net_position_change_3d": -353.18, "net_position_change_5d": -3115.15, "long_short_ratio": 0.37, "long_short_volume_ratio": 0.61, "momentum_score": -100, "extreme_warning": false, "date": "2026-06-26", "confidence": "高"}, {"variety": "MA", "variety_name": "甲醇", "signal_type": "中性观望", "signal_score": -7.43, "current_net_position": -5622, "current_net_market_value": -14983.89, "long_accounts": 23, "short_accounts": 74, "long_volume": 1073, "short_volume": 6695, "net_position_change_1d": 0.0, "net_position_change_3d": -8.49, "net_position_change_5d": -12.15, "long_short_ratio": 0.31, "long_short_volume_ratio": 0.16, "momentum_score": -6.19, "extreme_warning": false, "date": "2026-06-26", "confidence": "低"}, {"variety": "SH", "variety_name": "烧碱", "signal_type": "中性观望", "signal_score": 15.74, "current_net_position": -2356, "current_net_market_value": -13965.5, "long_accounts": 13, "short_accounts": 72, "long_volume": 814, "short_volume": 3170, "net_position_change_1d": 0.0, "net_position_change_3d": 23.06, "net_position_change_5d": 20.65, "long_short_ratio": 0.18, "long_short_volume_ratio": 0.26, "momentum_score": 13.11, "extreme_warning": false, "date": "2026-06-26", "confidence": "低"}, {"variety": "SM", "variety_name": "锰硅", "signal_type": "中性观望", "signal_score": -10.38, "current_net_position": -4033, "current_net_market_value": -11826.19, "long_accounts": 10, "short_accounts": 69, "long_volume": 523, "short_volume": 4556, "net_position_change_1d": 0.0, "net_position_change_3d": -3.7, "net_position_change_5d": -25.13, "long_short_ratio": 0.14, "long_short_volume_ratio": 0.11, "momentum_score": -8.65, "extreme_warning": false, "date": "2026-06-26", "confidence": "低"}, {"variety": "J", "variety_name": "焦炭", "signal_type": "中性观望", "signal_score": 8.23, "current_net_position": 532, "current_net_market_value": 10493.06, "long_accounts": 28, "short_accounts": 34, "long_volume": 693, "short_volume": 161, "net_position_change_1d": 0.0, "net_position_change_3d": 65.22, "net_position_change_5d": -37.78, "long_short_ratio": 0.82, "long_short_volume_ratio": 4.3, "momentum_score": 8.23, "extreme_warning": false, "date": "2026-06-26", "confidence": "低"}, {"variety": "SP", "variety_name": "纸浆", "signal_type": "中性观望", "signal_score": -39.12, "current_net_position": -2119, "current_net_market_value": -10125.01, "long_accounts": 25, "short_accounts": 62, "long_volume": 2027, "short_volume": 4146, "net_position_change_1d": 0.0, "net_position_change_3d": 11.6, "net_position_change_5d": -120.27, "long_short_ratio": 0.4, "long_short_volume_ratio": 0.49, "momentum_score": -32.6, "extreme_warning": false, "date": "2026-06-26", "confidence": "低"}, {"variety": "BR", "variety_name": "丁二烯橡胶", "signal_type": "强烈看空", "signal_score": -71.34, "current_net_position": -1520, "current_net_market_value": -9716.87, "long_accounts": 7, "short_accounts": 45, "long_volume": 123, "short_volume": 1643, "net_position_change_1d": 0.0, "net_position_change_3d": -21.31, "net_position_change_5d": -176.87, "long_short_ratio": 0.16, "long_short_volume_ratio": 0.07, "momentum_score": -59.45, "extreme_warning": false, "date": "2026-06-26", "confidence": "高"}, {"variety": "SI", "variety_name": "SI", "signal_type": "强烈看空", "signal_score": -100, "current_net_position": -2299, "current_net_market_value": -9688.39, "long_accounts": 16, "short_accounts": 62, "long_volume": 700, "short_volume": 2999, "net_position_change_1d": 0.0, "net_position_change_3d": -482.03, "net_position_change_5d": -1213.71, "long_short_ratio": 0.26, "long_short_volume_ratio": 0.23, "momentum_score": -100, "extreme_warning": false, "date": "2026-06-26", "confidence": "高"}, {"variety": "SC", "variety_name": "原油", "signal_type": "中性观望", "signal_score": 20.6, "current_net_position": -183, "current_net_market_value": -9483.52, "long_accounts": 20, "short_accounts": 46, "long_volume": 80, "short_volume": 263, "net_position_change_1d": 0.0, "net_position_change_3d": 25.0, "net_position_change_5d": 32.22, "long_short_ratio": 0.43, "long_short_volume_ratio": 0.3, "momentum_score": 17.17, "extreme_warning": false, "date": "2026-06-26", "confidence": "低"}, {"variety": "FG", "variety_name": "玻璃", "signal_type": "中性观望", "signal_score": 25.93, "current_net_position": -4647, "current_net_market_value": -9072.11, "long_accounts": 33, "short_accounts": 88, "long_volume": 5632, "short_volume": 10279, "net_position_change_1d": 0.0, "net_position_change_3d": 32.87, "net_position_change_5d": 39.16, "long_short_ratio": 0.38, "long_short_volume_ratio": 0.55, "momentum_score": 21.61, "extreme_warning": false, "date": "2026-06-26", "confidence": "低"}, {"variety": "PP", "variety_name": "聚丙烯", "signal_type": "强烈看空", "signal_score": -73.38, "current_net_position": -2468, "current_net_market_value": -8935.14, "long_accounts": 26, "short_accounts": 50, "long_volume": 2034, "short_volume": 4502, "net_position_change_1d": 0.0, "net_position_change_3d": -111.48, "net_position_change_5d": -92.36, "long_short_ratio": 0.52, "long_short_volume_ratio": 0.45, "momentum_score": -61.15, "extreme_warning": false, "date": "2026-06-26", "confidence": "高"}, {"variety": "Y", "variety_name": "豆油", "signal_type": "强烈看多", "signal_score": 100, "current_net_position": 1043, "current_net_market_value": 8780.8, "long_accounts": 41, "short_accounts": 29, "long_volume": 1364, "short_volume": 321, "net_position_change_1d": 0.0, "net_position_change_3d": 406.31, "net_position_change_5d": 253.38, "long_short_ratio": 1.41, "long_short_volume_ratio": 4.25, "momentum_score": 100, "extreme_warning": false, "date": "2026-06-26", "confidence": "高"}, {"variety": "UR", "variety_name": "尿素", "signal_type": "强烈看空", "signal_score": -100, "current_net_position": -2411, "current_net_market_value": -8431.3, "long_accounts": 13, "short_accounts": 58, "long_volume": 670, "short_volume": 3081, "net_position_change_1d": 0.0, "net_position_change_3d": -224.93, "net_position_change_5d": -197.65, "long_short_ratio": 0.22, "long_short_volume_ratio": 0.22, "momentum_score": -100, "extreme_warning": false, "date": "2026-06-26", "confidence": "高"}, {"variety": "FU", "variety_name": "燃料油", "signal_type": "中性观望", "signal_score": 13.65, "current_net_position": -2436, "current_net_market_value": -8201.43, "long_accounts": 21, "short_accounts": 46, "long_volume": 362, "short_volume": 2798, "net_position_change_1d": 0.0, "net_position_change_3d": 9.88, "net_position_change_5d": 28.04, "long_short_ratio": 0.46, "long_short_volume_ratio": 0.13, "momentum_score": 11.38, "extreme_warning": false, "date": "2026-06-26", "confidence": "低"}, {"variety": "P", "variety_name": "棕榈油", "signal_type": "强烈看空", "signal_score": -100, "current_net_position": -811, "current_net_market_value": -7411.39, "long_accounts": 41, "short_accounts": 67, "long_volume": 1187, "short_volume": 1998, "net_position_change_1d": 0.0, "net_position_change_3d": -118.01, "net_position_change_5d": -497.55, "long_short_ratio": 0.61, "long_short_volume_ratio": 0.59, "momentum_score": -100, "extreme_warning": false, "date": "2026-06-26", "confidence": "高"}, {"variety": "A", "variety_name": "豆一", "signal_type": "强烈看多", "signal_score": 100, "current_net_position": 1591, "current_net_market_value": 7364.4, "long_accounts": 42, "short_accounts": 16, "long_volume": 2243, "short_volume": 652, "net_position_change_1d": 0.0, "net_position_change_3d": 194.09, "net_position_change_5d": 301.39, "long_short_ratio": 2.62, "long_short_volume_ratio": 3.44, "momentum_score": 100, "extreme_warning": false, "date": "2026-06-26", "confidence": "高"}, {"variety": "NI", "variety_name": "镍", "signal_type": "强烈看空", "signal_score": -100, "current_net_position": -552, "current_net_market_value": -7338.37, "long_accounts": 17, "short_accounts": 65, "long_volume": 778, "short_volume": 1330, "net_position_change_1d": 0.0, "net_position_change_3d": 10.24, "net_position_change_5d": -736.36, "long_short_ratio": 0.26, "long_short_volume_ratio": 0.58, "momentum_score": -100, "extreme_warning": false, "date": "2026-06-26", "confidence": "高"}, {"variety": "PB", "variety_name": "铅", "signal_type": "适度看空", "signal_score": -45.59, "current_net_position": -895, "current_net_market_value": -7318.15, "long_accounts": 5, "short_accounts": 21, "long_volume": 29, "short_volume": 924, "net_position_change_1d": 0.0, "net_position_change_3d": -53.52, "net_position_change_5d": -73.11, "long_short_ratio": 0.24, "long_short_volume_ratio": 0.03, "momentum_score": -37.99, "extreme_warning": false, "date": "2026-06-26", "confidence": "中"}, {"variety": "ZN", "variety_name": "锌", "signal_type": "强烈看空", "signal_score": -100, "current_net_position": -571, "current_net_market_value": -6888.16, "long_accounts": 5, "short_accounts": 40, "long_volume": 34, "short_volume": 605, "net_position_change_1d": 0.0, "net_position_change_3d": -388.03, "net_position_change_5d": -641.56, "long_short_ratio": 0.12, "long_short_volume_ratio": 0.06, "momentum_score": -100, "extreme_warning": false, "date": "2026-06-26", "confidence": "高"}, {"variety": "RM", "variety_name": "菜粕", "signal_type": "强烈看多", "signal_score": 100, "current_net_position": 2829, "current_net_market_value": 6587.67, "long_accounts": 33, "short_accounts": 27, "long_volume": 5500, "short_volume": 2671, "net_position_change_1d": 0.0, "net_position_change_3d": 9025.81, "net_position_change_5d": 220.03, "long_short_ratio": 1.22, "long_short_volume_ratio": 2.06, "momentum_score": 100, "extreme_warning": false, "date": "2026-06-26", "confidence": "高"}, {"variety": "EB", "variety_name": "苯乙烯", "signal_type": "中性观望", "signal_score": -28.4, "current_net_position": -1501, "current_net_market_value": -5868.79, "long_accounts": 15, "short_accounts": 52, "long_volume": 453, "short_volume": 1954, "net_position_change_1d": 0.0, "net_position_change_3d": -77.21, "net_position_change_5d": -1.69, "long_short_ratio": 0.29, "long_short_volume_ratio": 0.23, "momentum_score": -23.67, "extreme_warning": false, "date": "2026-06-26", "confidence": "低"}, {"variety": "BU", "variety_name": "BU", "signal_type": "中性观望", "signal_score": 25.7, "current_net_position": -1304, "current_net_market_value": -5215.36, "long_accounts": 19, "short_accounts": 49, "long_volume": 1161, "short_volume": 2465, "net_position_change_1d": 0.0, "net_position_change_3d": 42.61, "net_position_change_5d": 28.78, "long_short_ratio": 0.39, "long_short_volume_ratio": 0.47, "momentum_score": 21.42, "extreme_warning": false, "date": "2026-06-26", "confidence": "低"}, {"variety": "CJ", "variety_name": "红枣", "signal_type": "适度看空", "signal_score": -44.99, "current_net_position": -1064, "current_net_market_value": -4705.63, "long_accounts": 27, "short_accounts": 54, "long_volume": 639, "short_volume": 1703, "net_position_change_1d": 0.0, "net_position_change_3d": -65.22, "net_position_change_5d": -59.76, "long_short_ratio": 0.5, "long_short_volume_ratio": 0.38, "momentum_score": -37.49, "extreme_warning": false, "date": "2026-06-26", "confidence": "中"}, {"variety": "PF", "variety_name": "短纤", "signal_type": "中性观望", "signal_score": -24.06, "current_net_position": -1133, "current_net_market_value": -4139.29, "long_accounts": 6, "short_accounts": 29, "long_volume": 46, "short_volume": 1179, "net_position_change_1d": 0.0, "net_position_change_3d": -4.52, "net_position_change_5d": -62.32, "long_short_ratio": 0.21, "long_short_volume_ratio": 0.04, "momentum_score": -20.05, "extreme_warning": false, "date": "2026-06-26", "confidence": "低"}, {"variety": "SF", "variety_name": "硅铁", "signal_type": "中性观望", "signal_score": 0.15, "current_net_position": -1419, "current_net_market_value": -4075.96, "long_accounts": 15, "short_accounts": 46, "long_volume": 596, "short_volume": 2015, "net_position_change_1d": 0.0, "net_position_change_3d": 2.0, "net_position_change_5d": -1.57, "long_short_ratio": 0.33, "long_short_volume_ratio": 0.3, "momentum_score": 0.13, "extreme_warning": false, "date": "2026-06-26", "confidence": "低"}, {"variety": "PK", "variety_name": "花生", "signal_type": "中性观望", "signal_score": -10.45, "current_net_position": 933, "current_net_market_value": 3900.54, "long_accounts": 35, "short_accounts": 16, "long_volume": 1139, "short_volume": 206, "net_position_change_1d": 0.0, "net_position_change_3d": -11.31, "net_position_change_5d": -17.72, "long_short_ratio": 2.19, "long_short_volume_ratio": 5.53, "momentum_score": -8.71, "extreme_warning": false, "date": "2026-06-26", "confidence": "低"}, {"variety": "EG", "variety_name": "乙二醇", "signal_type": "中性观望", "signal_score": 30.18, "current_net_position": -793, "current_net_market_value": -3577.76, "long_accounts": 21, "short_accounts": 54, "long_volume": 859, "short_volume": 1652, "net_position_change_1d": 0.0, "net_position_change_3d": 45.01, "net_position_change_5d": 38.81, "long_short_ratio": 0.39, "long_short_volume_ratio": 0.52, "momentum_score": 25.15, "extreme_warning": false, "date": "2026-06-26", "confidence": "低"}, {"variety": "NR", "variety_name": "20号胶", "signal_type": "强烈看空", "signal_score": -100, "current_net_position": -219, "current_net_market_value": -3323.46, "long_accounts": 12, "short_accounts": 25, "long_volume": 135, "short_volume": 354, "net_position_change_1d": 0.0, "net_position_change_3d": -205.8, "net_position_change_5d": -213.47, "long_short_ratio": 0.48, "long_short_volume_ratio": 0.38, "momentum_score": -100, "extreme_warning": false, "date": "2026-06-26", "confidence": "高"}, {"variety": "L", "variety_name": "塑料", "signal_type": "强烈看多", "signal_score": 100, "current_net_position": 956, "current_net_market_value": 2978.83, "long_accounts": 26, "short_accounts": 53, "long_volume": 2911, "short_volume": 1955, "net_position_change_1d": 0.0, "net_position_change_3d": 573.24, "net_position_change_5d": 330.63, "long_short_ratio": 0.49, "long_short_volume_ratio": 1.49, "momentum_score": 100, "extreme_warning": false, "date": "2026-06-26", "confidence": "高"}, {"variety": "OI", "variety_name": "菜油", "signal_type": "强烈看空", "signal_score": -100, "current_net_position": -299, "current_net_market_value": -2906.35, "long_accounts": 28, "short_accounts": 37, "long_volume": 378, "short_volume": 677, "net_position_change_1d": 0.0, "net_position_change_3d": -522.92, "net_position_change_5d": -225.0, "long_short_ratio": 0.76, "long_short_volume_ratio": 0.56, "momentum_score": -100, "extreme_warning": false, "date": "2026-06-26", "confidence": "高"}, {"variety": "AD", "variety_name": "铸造铝合金", "signal_type": "强烈看空", "signal_score": -100, "current_net_position": -122, "current_net_market_value": -2781.46, "long_accounts": 1, "short_accounts": 14, "long_volume": 2, "short_volume": 124, "net_position_change_1d": 0.0, "net_position_change_3d": -3966.67, "net_position_change_5d": -310.34, "long_short_ratio": 0.07, "long_short_volume_ratio": 0.02, "momentum_score": -100, "extreme_warning": false, "date": "2026-06-26", "confidence": "高"}, {"variety": "AP", "variety_name": "苹果", "signal_type": "适度看多", "signal_score": 45.85, "current_net_position": -359, "current_net_market_value": -2662.24, "long_accounts": 38, "short_accounts": 20, "long_volume": 558, "short_volume": 917, "net_position_change_1d": 0.0, "net_position_change_3d": 76.19, "net_position_change_5d": 76.66, "long_short_ratio": 1.9, "long_short_volume_ratio": 0.61, "momentum_score": 45.85, "extreme_warning": false, "date": "2026-06-26", "confidence": "中"}, {"variety": "PG", "variety_name": "LPG", "signal_type": "中性观望", "signal_score": -19.52, "current_net_position": -279, "current_net_market_value": -2592.23, "long_accounts": 13, "short_accounts": 34, "long_volume": 192, "short_volume": 471, "net_position_change_1d": 0.0, "net_position_change_3d": -71.17, "net_position_change_5d": 16.96, "long_short_ratio": 0.38, "long_short_volume_ratio": 0.41, "momentum_score": -16.26, "extreme_warning": false, "date": "2026-06-26", "confidence": "低"}, {"variety": "B", "variety_name": "豆二", "signal_type": "中性观望", "signal_score": -31.41, "current_net_position": -648, "current_net_market_value": -2348.24, "long_accounts": 25, "short_accounts": 12, "long_volume": 456, "short_volume": 1104, "net_position_change_1d": 0.0, "net_position_change_3d": -31.44, "net_position_change_5d": -73.26, "long_short_ratio": 2.08, "long_short_volume_ratio": 0.41, "momentum_score": -31.41, "extreme_warning": false, "date": "2026-06-26", "confidence": "低"}, {"variety": "LU", "variety_name": "低硫燃料油", "signal_type": "中性观望", "signal_score": -13.99, "current_net_position": -574, "current_net_market_value": -2273.9, "long_accounts": 15, "short_accounts": 18, "long_volume": 319, "short_volume": 893, "net_position_change_1d": 0.0, "net_position_change_3d": -11.89, "net_position_change_5d": -34.74, "long_short_ratio": 0.83, "long_short_volume_ratio": 0.36, "momentum_score": -13.99, "extreme_warning": false, "date": "2026-06-26", "confidence": "低"}, {"variety": "IH", "variety_name": "IH", "signal_type": "中性观望", "signal_score": -18.19, "current_net_position": 27, "current_net_market_value": 2199.33, "long_accounts": 34, "short_accounts": 20, "long_volume": 225, "short_volume": 198, "net_position_change_1d": 0.0, "net_position_change_3d": 28.57, "net_position_change_5d": -89.2, "long_short_ratio": 1.7, "long_short_volume_ratio": 1.14, "momentum_score": -18.19, "extreme_warning": false, "date": "2026-06-26", "confidence": "低"}, {"variety": "CS", "variety_name": "玉米淀粉", "signal_type": "强烈看多", "signal_score": 100, "current_net_position": 767, "current_net_market_value": 2093.95, "long_accounts": 22, "short_accounts": 11, "long_volume": 1059, "short_volume": 292, "net_position_change_1d": 0.0, "net_position_change_3d": 129.64, "net_position_change_5d": 1178.33, "long_short_ratio": 2.0, "long_short_volume_ratio": 3.63, "momentum_score": 100, "extreme_warning": false, "date": "2026-06-26", "confidence": "高"}, {"variety": "C", "variety_name": "玉米", "signal_type": "适度看空", "signal_score": -49.02, "current_net_position": 671, "current_net_market_value": 1694.68, "long_accounts": 20, "short_accounts": 52, "long_volume": 6335, "short_volume": 5664, "net_position_change_1d": 0.0, "net_position_change_3d": -80.04, "net_position_change_5d": -83.36, "long_short_ratio": 0.38, "long_short_volume_ratio": 1.12, "momentum_score": -49.02, "extreme_warning": false, "date": "2026-06-26", "confidence": "中"}, {"variety": "PR", "variety_name": "PR", "signal_type": "中性观望", "signal_score": -14.13, "current_net_position": -226, "current_net_market_value": -1621.12, "long_accounts": 5, "short_accounts": 21, "long_volume": 25, "short_volume": 251, "net_position_change_1d": 0.0, "net_position_change_3d": -26.26, "net_position_change_5d": -13.0, "long_short_ratio": 0.24, "long_short_volume_ratio": 0.1, "momentum_score": -11.78, "extreme_warning": false, "date": "2026-06-26", "confidence": "低"}, {"variety": "SS", "variety_name": "不锈钢", "signal_type": "适度看空", "signal_score": -62.67, "current_net_position": -195, "current_net_market_value": -1426.63, "long_accounts": 9, "short_accounts": 22, "long_volume": 111, "short_volume": 306, "net_position_change_1d": 0.0, "net_position_change_3d": -24.2, "net_position_change_5d": -149.87, "long_short_ratio": 0.41, "long_short_volume_ratio": 0.36, "momentum_score": -52.22, "extreme_warning": false, "date": "2026-06-26", "confidence": "中"}, {"variety": "JM", "variety_name": "焦煤", "signal_type": "适度看空", "signal_score": -46.39, "current_net_position": -453, "current_net_market_value": -1397.42, "long_accounts": 42, "short_accounts": 83, "long_volume": 3603, "short_volume": 4056, "net_position_change_1d": 0.0, "net_position_change_3d": 64.36, "net_position_change_5d": -219.01, "long_short_ratio": 0.51, "long_short_volume_ratio": 0.89, "momentum_score": -46.39, "extreme_warning": false, "date": "2026-06-26", "confidence": "中"}, {"variety": "BZ", "variety_name": "BZ", "signal_type": "中性观望", "signal_score": -23.64, "current_net_position": -153, "current_net_market_value": -1030.64, "long_accounts": 1, "short_accounts": 21, "long_volume": 2, "short_volume": 155, "net_position_change_1d": 0.0, "net_position_change_3d": -14.18, "net_position_change_5d": -51.49, "long_short_ratio": 0.05, "long_short_volume_ratio": 0.01, "momentum_score": -19.7, "extreme_warning": false, "date": "2026-06-26", "confidence": "低"}, {"variety": "BC", "variety_name": "阴极铜", "signal_type": "强烈看空", "signal_score": -100, "current_net_position": -14, "current_net_market_value": -634.66, "long_accounts": 1, "short_accounts": 8, "long_volume": 1, "short_volume": 15, "net_position_change_1d": 0.0, "net_position_change_3d": -250.0, "net_position_change_5d": -1500.0, "long_short_ratio": 0.12, "long_short_volume_ratio": 0.07, "momentum_score": -100, "extreme_warning": false, "date": "2026-06-26", "confidence": "高"}, {"variety": "PL", "variety_name": "PL", "signal_type": "中性观望", "signal_score": 6.85, "current_net_position": -76, "current_net_market_value": -568.39, "long_accounts": 0, "short_accounts": 16, "long_volume": 0, "short_volume": 76, "net_position_change_1d": 0.0, "net_position_change_3d": 8.43, "net_position_change_5d": 10.59, "long_short_ratio": 0.0, "long_short_volume_ratio": 0.0, "momentum_score": 5.71, "extreme_warning": false, "date": "2026-06-26", "confidence": "低"}, {"variety": "PX", "variety_name": "对二甲苯", "signal_type": "适度看空", "signal_score": -50.2, "current_net_position": -116, "current_net_market_value": -406.41, "long_accounts": 14, "short_accounts": 33, "long_volume": 769, "short_volume": 885, "net_position_change_1d": 0.0, "net_position_change_3d": -52.63, "net_position_change_5d": -114.7, "long_short_ratio": 0.42, "long_short_volume_ratio": 0.87, "momentum_score": -50.2, "extreme_warning": false, "date": "2026-06-26", "confidence": "中"}, {"variety": "PS", "variety_name": "PS", "signal_type": "适度看空", "signal_score": -60.7, "current_net_position": -7, "current_net_market_value": 196.66, "long_accounts": 14, "short_accounts": 23, "long_volume": 472, "short_volume": 479, "net_position_change_1d": 0.0, "net_position_change_3d": -101.01, "net_position_change_5d": -101.34, "long_short_ratio": 0.61, "long_short_volume_ratio": 0.99, "momentum_score": -60.7, "extreme_warning": false, "date": "2026-06-26", "confidence": "中"}, {"variety": "CY", "variety_name": "棉纱", "signal_type": "强烈看空", "signal_score": -91.16, "current_net_position": -7, "current_net_market_value": -151.3, "long_accounts": 2, "short_accounts": 2, "long_volume": 19, "short_volume": 26, "net_position_change_1d": 0.0, "net_position_change_3d": -150.0, "net_position_change_5d": -153.85, "long_short_ratio": 1.0, "long_short_volume_ratio": 0.73, "momentum_score": -91.16, "extreme_warning": false, "date": "2026-06-26", "confidence": "高"}, {"variety": "LG", "variety_name": "LG", "signal_type": "中性观望", "signal_score": -34.59, "current_net_position": 103, "current_net_market_value": 84.5, "long_accounts": 8, "short_accounts": 2, "long_volume": 115, "short_volume": 12, "net_position_change_1d": 0.0, "net_position_change_3d": -27.97, "net_position_change_5d": -68.11, "long_short_ratio": 4.0, "long_short_volume_ratio": 9.58, "momentum_score": -28.82, "extreme_warning": false, "date": "2026-06-26", "confidence": "低"}, {"variety": "AO", "variety_name": "氧化铝", "signal_type": "适度看空", "signal_score": -63.3, "current_net_position": -26, "current_net_market_value": -51.16, "long_accounts": 20, "short_accounts": 44, "long_volume": 871, "short_volume": 897, "net_position_change_1d": 0.0, "net_position_change_3d": -109.59, "net_position_change_5d": -101.42, "long_short_ratio": 0.45, "long_short_volume_ratio": 0.97, "momentum_score": -63.3, "extreme_warning": false, "date": "2026-06-26", "confidence": "中"}, {"variety": "PT", "variety_name": "PT", "signal_type": "中性观望", "signal_score": -24.17, "current_net_position": -77, "current_net_market_value": -32.59, "long_accounts": 0, "short_accounts": 12, "long_volume": 0, "short_volume": 77, "net_position_change_1d": 0.0, "net_position_change_3d": -10.0, "net_position_change_5d": -57.14, "long_short_ratio": 0.0, "long_short_volume_ratio": 0.0, "momentum_score": -20.14, "extreme_warning": false, "date": "2026-06-26", "confidence": "低"}, {"variety": "OP", "variety_name": "OP", "signal_type": "中性观望", "signal_score": 36.0, "current_net_position": -5, "current_net_market_value": -19.75, "long_accounts": 0, "short_accounts": 2, "long_volume": 0, "short_volume": 5, "net_position_change_1d": 0.0, "net_position_change_3d": 50.0, "net_position_change_5d": 50.0, "long_short_ratio": 0.0, "long_short_volume_ratio": 0.0, "momentum_score": 30.0, "extreme_warning": false, "date": "2026-06-26", "confidence": "低"}, {"variety": "EC", "variety_name": "集运指数", "signal_type": "中性观望", "signal_score": -27.01, "current_net_position": 72, "current_net_market_value": 8.42, "long_accounts": 20, "short_accounts": 25, "long_volume": 197, "short_volume": 125, "net_position_change_1d": 0.0, "net_position_change_3d": -46.27, "net_position_change_5d": -43.75, "long_short_ratio": 0.8, "long_short_volume_ratio": 1.58, "momentum_score": -27.01, "extreme_warning": false, "date": "2026-06-26", "confidence": "低"}, {"variety": "FB", "variety_name": "FB", "signal_type": "中性观望", "signal_score": 0.0, "current_net_position": 2, "current_net_market_value": 2.63, "long_accounts": 1, "short_accounts": 0, "long_volume": 2, "short_volume": 0, "net_position_change_1d": 0.0, "net_position_change_3d": 0.0, "net_position_change_5d": 0.0, "long_short_ratio": 1.0, "long_short_volume_ratio": 2.0, "momentum_score": 0.0, "extreme_warning": false, "date": "2026-06-26", "confidence": "低"}, {"variety": "PD", "variety_name": "PD", "signal_type": "强烈看空", "signal_score": -100, "current_net_position": -2, "current_net_market_value": -0.64, "long_accounts": 1, "short_accounts": 3, "long_volume": 2, "short_volume": 4, "net_position_change_1d": 0.0, "net_position_change_3d": -300.0, "net_position_change_5d": -100.0, "long_short_ratio": 0.33, "long_short_volume_ratio": 0.5, "momentum_score": -100, "extreme_warning": false, "date": "2026-06-26", "confidence": "高"}];
+        
+        // 排名图表
+        function initRankChart() {
+            const sorted = [...signalsData].sort((a, b) => Math.abs(b.signal_score) - Math.abs(a.signal_score)).slice(0, 15);
+            const chart = echarts.init(document.getElementById('rankChart'));
+            chart.setOption({
+                tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' }, formatter: function(p) { return p[0].name + '<br>得分: ' + p[0].value; } },
+                grid: { left: '3%', right: '8%', bottom: '3%', containLabel: true },
+                xAxis: { type: 'value', min: -100, max: 100, axisLabel: { formatter: '{value}' } },
+                yAxis: { type: 'category', data: sorted.map(d => d.variety + ' ' + d.variety_name).reverse(), axisLabel: { fontSize: 11 } },
+                series: [{
+                    type: 'bar',
+                    data: sorted.map(d => ({
+                        value: d.signal_score,
+                        itemStyle: { color: d.signal_score > 0 ? '#f5222d' : '#52c41a' }
+                    })).reverse()
+                }]
+            });
+        }
+
+        // 散点图
+        function initScatterChart() {
+            const chart = echarts.init(document.getElementById('scatterChart'));
+            const seriesData = signalsData.map(d => [d.long_short_ratio, d.signal_score, d.variety, d.variety_name, d.signal_type]);
+            chart.setOption({
+                tooltip: {
+                    formatter: function(p) {
+                        return p.data[2] + ' ' + p.data[3] + '<br>信号: ' + p.data[4] + '<br>多空比: ' + p.data[0].toFixed(2) + '<br>得分: ' + p.data[1].toFixed(2);
+                    }
+                },
+                grid: { left: '3%', right: '4%', bottom: '10%', containLabel: true },
+                xAxis: { type: 'value', name: '多空账户比', nameLocation: 'middle', nameGap: 25, min: 0 },
+                yAxis: { type: 'value', name: '信号得分', min: -100, max: 100 },
+                series: [{
+                    type: 'scatter',
+                    data: seriesData,
+                    symbolSize: function(d) { return Math.max(8, Math.abs(d[1]) / 4); },
+                    itemStyle: {
+                        color: function(p) {
+                            const score = p.data[1];
+                            if (score >= 70) return '#f5222d';
+                            if (score >= 40) return '#ff7875';
+                            if (score <= -70) return '#52c41a';
+                            if (score <= -40) return '#95de64';
+                            return '#faad14';
+                        }
+                    }
+                }]
+            });
+        }
+
+        // 饼图
+        function initPieChart() {
+            const counts = {};
+            signalsData.forEach(d => { counts[d.signal_type] = (counts[d.signal_type] || 0) + 1; });
+            const chart = echarts.init(document.getElementById('pieChart'));
+            chart.setOption({
+                tooltip: { trigger: 'item', formatter: '{b}: {c} ({d}%)' },
+                legend: { orient: 'vertical', left: 'left', top: 'center' },
+                series: [{
+                    type: 'pie',
+                    radius: ['40%', '70%'],
+                    center: ['60%', '50%'],
+                    data: Object.entries(counts).map(([k, v]) => ({ name: k, value: v })),
+                    itemStyle: {
+                        color: function(p) {
+                            const colors = {
+                                '强烈看多': '#f5222d', '适度看多': '#ff7875',
+                                '中性': '#faad14',
+                                '适度看空': '#95de64', '强烈看空': '#52c41a'
+                            };
+                            return colors[p.name] || '#999';
+                        }
+                    }
+                }]
+            });
+        }
+
+        // 柱状图
+        function initBarChart() {
+            const sorted = [...signalsData].sort((a, b) => Math.abs(b.current_net_market_value) - Math.abs(a.current_net_market_value)).slice(0, 15);
+            const chart = echarts.init(document.getElementById('barChart'));
+            chart.setOption({
+                tooltip: { trigger: 'axis', formatter: function(p) { return p[0].name + '<br>市值: ' + p[0].value + '万'; } },
+                grid: { left: '3%', right: '4%', bottom: '10%', containLabel: true },
+                xAxis: { type: 'category', data: sorted.map(d => d.variety), axisLabel: { rotate: 0 } },
+                yAxis: { type: 'value', name: '市值(万)' },
+                series: [{
+                    type: 'bar',
+                    data: sorted.map(d => ({
+                        value: d.current_net_market_value,
+                        itemStyle: { color: d.current_net_market_value > 0 ? '#f5222d' : '#52c41a' }
+                    }))
+                }]
+            });
+        }
+
+        // 更新表格
+        function updateTable() {
+            const tbody = document.getElementById('tableBody');
+            const sorted = [...signalsData].sort((a, b) => Math.abs(b.signal_score) - Math.abs(a.signal_score));
+            
+            tbody.innerHTML = sorted.map((d, i) => {
+                const badgeClass = {
+                    '强烈看多': 'strong-long', '适度看多': 'moderate-long',
+                    '中性': 'neutral',
+                    '适度看空': 'moderate-short', '强烈看空': 'strong-short'
+                }[d.signal_type] || 'neutral';
+                
+                const scorePercent = Math.abs(d.signal_score);
+                const scoreColor = d.signal_score > 0 ? 'red' : 'green';
+                
+                return `<tr>
+                    <td class="number">${i + 1}</td>
+                    <td><strong>${d.variety}</strong><br><small style="color:#999">${d.variety_name}</small></td>
+                    <td><span class="badge ${badgeClass}">${d.signal_type}</span></td>
+                    <td>
+                        <span class="number ${scoreColor}">${d.signal_score > 0 ? '+' : ''}${d.signal_score}</span>
+                        <div class="score-bar"><div class="fill ${scoreColor}" style="width:${scorePercent}%"></div></div>
+                    </td>
+                    <td class="number ${d.current_net_position > 0 ? 'red' : 'green'}">${d.current_net_position > 0 ? '+' : ''}${d.current_net_position}</td>
+                    <td class="number ${d.current_net_market_value > 0 ? 'red' : 'green'}">${d.current_net_market_value > 0 ? '+' : ''}${d.current_net_market_value}</td>
+                    <td class="number">${d.long_short_ratio}</td>
+                    <td class="number ${d.net_position_change_1d > 0 ? 'red' : 'green'}">${d.net_position_change_1d > 0 ? '+' : ''}${d.net_position_change_1d}%</td>
+                    <td class="number ${d.net_position_change_3d > 0 ? 'red' : 'green'}">${d.net_position_change_3d > 0 ? '+' : ''}${d.net_position_change_3d}%</td>
+                    <td class="number ${d.net_position_change_5d > 0 ? 'red' : 'green'}">${d.net_position_change_5d > 0 ? '+' : ''}${d.net_position_change_5d}%</td>
+                    <td>${d.confidence}</td>
+                </tr>`;
+            }).join('');
+        }
+
+        // 初始化
+        initRankChart();
+        initScatterChart();
+        initPieChart();
+        initBarChart();
+        updateTable();
+    </script>
+</body>
+</html>
